@@ -71,7 +71,12 @@ single movie at a time).
 Judge from the resource title, size, and download count in the table. The user's
 explicit request always wins; otherwise apply these defaults:
 
-- **Resolution**: default to `1080p`. Aliases: `4K`/`UHD`/`2160p` are the same tier,
+- **TV shows**: prefer a **complete-season pack** — titles saying `全集`/`全季`/`合集`/
+  `全XX集`/`Complete`/`Season`/`S01` (whole season, not one episode) — over single
+  episodes (`E01`/`S01E01`/`第X集`). Only pick single episodes when no pack exists
+  or the user asks for specific episodes. A full-season pack is naturally much
+  bigger than one episode, so don't penalize it on size.
+- **Resolution**: default to `2160p` (4K). Aliases: `4K`/`UHD`/`2160p` are the same tier,
   as are `FHD`/`1080p` and `HD`/`720p`. If the preferred tier is missing, prefer one
   tier **higher** over going lower.
 - **Audio**: `国语`/`普通话`/`国配` = Mandarin, `粤语` = Cantonese. For foreign films
