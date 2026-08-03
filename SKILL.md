@@ -4,7 +4,7 @@ description: >
   Search movies and TV shows on btbtla.com and return magnet / download links.
   Trigger when the user asks to search a movie, get a magnet, use bt-search,
   download a film or show, or similar.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # bt-search
@@ -13,6 +13,9 @@ Search for films or shows on btbtla.com and retrieve their magnet / thunder down
 
 This skill is **self-contained**: the full CLI (`main.py` + the `bt_search` package)
 ships inside this skill directory and can be run from anywhere.
+
+The CLI only searches, lists, and fetches links — it **never picks a resource for you**.
+Picking the best resource is your job (the model's); the heuristics are below.
 
 ## When to use
 
@@ -34,58 +37,71 @@ Requires `uv` (`brew install uv`). If uv is unavailable, install the three depen
 into any Python ≥3.9 environment (`pip install requests beautifulsoup4 zhconv`) and run
 `python3 <path>/main.py` instead.
 
-The CLI is interactive by default. When acting as an agent, **always use non-interactive
-flags** so the command completes without blocking for stdin.
+The CLI is interactive only when stdin is a TTY. When acting as an agent, stdin is not
+a TTY, so each command below runs to completion without blocking.
 
-## Non-interactive patterns
+## Agent workflow
 
-Single movie, auto-pick best resource, magnet only:
+Three runs: search → list resources → fetch the link you picked.
 
-```bash
-uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "阿凡达" --movies 1 --magnet-only
-```
+1. **Search** and read the movie list (printed to stderr):
 
-Multiple movies, auto-pick best resource per movie, magnet only:
+   ```bash
+   uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "阿凡达"
+   ```
 
-```bash
-uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "阿凡达" --movies 1,3-5 --magnet-only
-```
+2. **List resources** for the movie index you chose (table goes to stderr, then exits):
 
-Temporarily override preferences:
+   ```bash
+   uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "阿凡达" --movies 1
+   ```
 
-```bash
-uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "Inception" --movies 1 --resolution 2160p --prefer-original-audio --subtitles chi --magnet-only
-```
+3. **Pick one resource** using the heuristics below, then fetch its magnet
+   (stdout carries the magnet, one per line):
 
-## Common flags
+   ```bash
+   uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "阿凡达" --movies 1 --resource-index 22 --magnet-only
+   ```
+
+For several movies, repeat steps 2–3 per movie (`--resource-index` only accepts a
+single movie at a time).
+
+## How to pick a resource
+
+Judge from the resource title, size, and download count in the table. The user's
+explicit request always wins; otherwise apply these defaults:
+
+- **Resolution**: default to `1080p`. Aliases: `4K`/`UHD`/`2160p` are the same tier,
+  as are `FHD`/`1080p` and `HD`/`720p`. If the preferred tier is missing, prefer one
+  tier **higher** over going lower.
+- **Audio**: `国语`/`普通话`/`国配` = Mandarin, `粤语` = Cantonese. For foreign films
+  prefer the **original audio** (i.e. not 国语/粤语 dub) with Chinese subtitles;
+  `X国Y多音轨` means multiple tracks and satisfies both.
+- **Subtitles**: `中字`/`中英`/`双语`/`简中`/`繁中` all count as Chinese subtitles.
+  Default to wanting Chinese subtitles unless the user says otherwise.
+- **HDR / Dolby Vision**: titles mark `HDR`/`HDR10`/`DV`/`DoVi`/`杜比视界`. Only pick
+  these when the user's setup supports them; otherwise prefer the SDR equivalent.
+- **Size**: sanity-check against the tier — a 4K movie is typically ≤ 20 GB, 1080p
+  ≤ 8 GB, 720p ≤ 4 GB. Far larger usually means a REMUX/原盘 or a pack; only choose
+  those if the user wants full-disc quality.
+- **Download count**: the tiebreaker — higher is healthier. Be wary of 0-download
+  entries when alternatives exist.
+
+State your pick and the reason briefly before fetching the link.
+
+## Flags
 
 | Flag | Meaning |
 | --- | --- |
 | `--movies <indices>` | Skip movie selection. Accepts `1`, `1,3`, `1-3`, `1,3-5,7`, `all`. |
-| `--resource-index N` | Skip resource selection. Only valid when selecting a single movie. |
+| `--resource-index N` | Fetch this resource's links. Single movie only. |
 | `--magnet-only` | Print only magnet links, one per line, to stdout. |
-| `--resolution` | Override resolution (`1080p`, `2160p`, `4k`, `720p`, ...). |
-| `--audio` | Override audio (`guo`, `yue`, `eng`, `jpn`, `kor`). |
-| `--subtitles` | Override subtitles (`chi`, `eng`, `jpn`, `kor`). |
-| `--prefer-original-audio` | Prefer non-Chinese/Cantonese audio tracks. |
-| `--no-hdr` / `--no-dolby-vision` | Avoid HDR / Dolby Vision resources. |
-| `--max-size <size>` | Penalize oversized resources (`20`, `20GB`, `800MB`). |
-| `--auto-pick` / `--interactive` | Control whether resources are auto-picked. |
-| `-n N` | Limit number of search results shown. |
-
-## Configuration
-
-Optional user preferences live in `~/.config/bt-search/config.json` (see
-`bt-search.example.json` in this skill directory for all fields: resolution, audio,
-subtitles, `prefer_original_audio`, `hdr`, `dolby_vision`, `auto_pick`, `max_size_gb`).
-CLI flags override the config for a single run. Note: `./bt-search.json` in the
-**current working directory** is also read if present — when running as an agent the
-cwd varies, so rely on `~/.config` or flags instead.
+| `-n N` | Limit number of search results shown (default 10). |
 
 ## Output handling
 
 - With `--magnet-only`, magnet links go to **stdout** (one per line).
-- Everything else (search results, tables, errors) goes to **stderr**.
+- Everything else (search results, resource tables, hints, errors) goes to **stderr**.
 
 ## Notes
 
