@@ -1,4 +1,10 @@
-"""命令行入口：交互式输入影片名 → 选择影片 → 选择资源 → 输出 magnet 等下载链接。"""
+"""命令行入口：搜索影片 → 选择影片 → 列出资源 → 按序号输出 magnet 等下载链接。
+
+本程序只做"搜索、列表、取链接"，不替用户挑资源：
+    - 人类在 TTY 里运行时，交互式选择；
+    - 作为 agent 调用时，先跑一遍看资源表（stderr），再由大模型挑选序号，
+      加 ``--resource-index N`` 重跑取链接。挑选启发式写在 SKILL.md 里。
+"""
 
 # /// script
 # requires-python = ">=3.9"
@@ -12,7 +18,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from typing import List, Optional
 
@@ -27,14 +32,6 @@ from bt_search.cli import (
     print_resource_table,
     print_search_results,
 )
-from bt_search.config import load_config
-from bt_search.picker import Preferences, normalize_lang, pick_best
-
-
-_KNOWN_AUDIO = {"", "guo", "yue", "eng", "jpn", "kor"}
-_KNOWN_SUBTITLES = {"", "chi", "eng", "jpn", "kor"}
-_KNOWN_RESOLUTIONS = {"", "8k", "4320p", "4k", "2160p", "uhd", "1440p", "2k", "qhd",
-                      "1080p", "fhd", "720p", "hd", "480p", "sd"}
 
 
 def _print_fallback_log(
@@ -67,35 +64,6 @@ def _print_no_results_help(
         "  · 换站点：btbtt.com / btdig.com / ciliba.com / 蒲公英 / 磁力熊",
         file=file,
     )
-
-
-def _warn_if_unknown(name: str, value: str, known: set[str]) -> None:
-    if value and value not in known:
-        print(
-            f"警告：{name} “{value}” 不是已知的取值，挑选时可能无法命中。"
-            f"已知值：{', '.join(sorted(known - {''}))}",
-            file=sys.stderr,
-        )
-
-
-def _parse_size_gb(value: str) -> float:
-    """解析 "20" / "20GB" / "4.5GB" / "800MB" / "1TB" 这样的体积串为 GB 浮点。"""
-
-    s = (value or "").strip()
-    if not s:
-        raise ValueError("空字符串")
-    m = re.match(r"^\s*([\d.]+)\s*(GB|MB|KB|TB)?\s*$", s, re.IGNORECASE)
-    if not m:
-        raise ValueError(f"无法解析体积：{value!r}")
-    num = float(m.group(1))
-    unit = (m.group(2) or "GB").upper()
-    if unit == "TB":
-        return num * 1000.0
-    if unit == "MB":
-        return num / 1000.0
-    if unit == "KB":
-        return num / 1_000_000.0
-    return num
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -137,88 +105,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="只打印 magnet 链接（适合直接喂给下载工具）。",
     )
-    p.add_argument(
-        "--resolution",
-        default=None,
-        help="覆盖配置文件里的默认分辨率（例 1080p / 2160p / 4k）。",
-    )
-    p.add_argument(
-        "--audio",
-        default=None,
-        help="覆盖音频偏好（guo/eng/jpn/kor/yue 或 国语/英语...）。",
-    )
-    p.add_argument(
-        "--subtitles",
-        default=None,
-        help="覆盖字幕偏好（chi/eng/jpn/kor 或 中字/英字...）。",
-    )
-    p.add_argument(
-        "--prefer-original-audio",
-        dest="prefer_original_audio",
-        action="store_true",
-        default=None,
-        help="偏好原声音轨（适合外国片原声+中字场景，覆盖配置）。",
-    )
-    p.add_argument(
-        "--no-prefer-original-audio",
-        dest="prefer_original_audio",
-        action="store_false",
-        default=None,
-        help="关闭原声偏好（覆盖配置）。",
-    )
-    p.add_argument(
-        "--hdr",
-        dest="hdr",
-        action="store_true",
-        default=None,
-        help="强制接受 HDR（覆盖配置）。",
-    )
-    p.add_argument(
-        "--no-hdr",
-        dest="hdr",
-        action="store_false",
-        default=None,
-        help="强制偏好非 HDR（覆盖配置）。",
-    )
-    p.add_argument(
-        "--dolby-vision",
-        dest="dolby_vision",
-        action="store_true",
-        default=None,
-        help="强制接受杜比视界（覆盖配置）。",
-    )
-    p.add_argument(
-        "--no-dolby-vision",
-        dest="dolby_vision",
-        action="store_false",
-        default=None,
-        help="强制偏好非杜比视界（覆盖配置）。",
-    )
-    p.add_argument(
-        "--max-size",
-        dest="max_size",
-        default=None,
-        help=(
-            "体积上限。接受纯数字（默认 GB）或带单位，如 20 / 20GB / 4.5GB / 800MB。"
-            " 超过的资源会被扣分而不是直接排除（仍可回落）。"
-        ),
-    )
-
-    auto_group = p.add_mutually_exclusive_group()
-    auto_group.add_argument(
-        "--auto-pick",
-        dest="auto_pick",
-        action="store_true",
-        default=None,
-        help="开启自动挑选（覆盖配置）。",
-    )
-    auto_group.add_argument(
-        "--interactive",
-        dest="auto_pick",
-        action="store_false",
-        default=None,
-        help="关闭自动挑选，进入交互选择（覆盖配置）。",
-    )
     return p
 
 
@@ -229,54 +115,6 @@ def _build_pool() -> SourcePool:
 
 
 def run(args: argparse.Namespace) -> int:
-    cfg = load_config()
-    auto_pick = args.auto_pick if args.auto_pick is not None else cfg.auto_pick
-
-    resolution = (args.resolution or cfg.resolution).strip().lower() or cfg.resolution
-    audio = normalize_lang(args.audio if args.audio is not None else cfg.audio)
-    subtitles = normalize_lang(args.subtitles if args.subtitles is not None else cfg.subtitles)
-
-    _warn_if_unknown("音频", audio, _KNOWN_AUDIO)
-    _warn_if_unknown("字幕", subtitles, _KNOWN_SUBTITLES)
-    _warn_if_unknown("分辨率", resolution, _KNOWN_RESOLUTIONS)
-
-    # 体积上限：CLI 优先，其次配置
-    max_size_gb: Optional[float] = None
-    raw_max_size = args.max_size if args.max_size is not None else cfg.max_size_gb
-    if raw_max_size is not None:
-        try:
-            max_size_gb = float(raw_max_size) if isinstance(raw_max_size, (int, float)) else _parse_size_gb(str(raw_max_size))
-        except ValueError as e:
-            print(f"警告：max_size 解析失败（{e}），已忽略。", file=sys.stderr)
-
-    prefs = Preferences(
-        resolution=resolution,
-        audio=audio,
-        subtitles=subtitles,
-        prefer_original_audio=(
-            args.prefer_original_audio
-            if args.prefer_original_audio is not None
-            else cfg.prefer_original_audio
-        ),
-        hdr=args.hdr if args.hdr is not None else cfg.hdr,
-        dolby_vision=args.dolby_vision if args.dolby_vision is not None else cfg.dolby_vision,
-        max_size_gb=max_size_gb,
-    )
-
-    original_audio = " · 偏好原声" if prefs.prefer_original_audio else ""
-    max_size_str = f" · 体积上限 {prefs.max_size_gb:g}GB" if prefs.max_size_gb is not None else ""
-    print(
-        f"\n偏好：分辨率 {prefs.resolution}"
-        f" · 音频 {prefs.audio or '不限'}"
-        f"{original_audio}"
-        f" · 字幕 {prefs.subtitles or '不限'}"
-        f" · HDR {'开' if prefs.hdr else '关'}"
-        f" · 杜比视界 {'开' if prefs.dolby_vision else '关'}"
-        f"{max_size_str}"
-        f" · 自动挑选 {'开' if auto_pick else '关'}\n",
-        file=sys.stderr,
-    )
-
     pool = _build_pool()
 
     keyword: Optional[str] = args.keyword
@@ -332,8 +170,16 @@ def run(args: argparse.Namespace) -> int:
             return 0
 
     multi_movie = len(chosen_movies) > 1
+    if args.resource_index is not None and multi_movie:
+        print(
+            "--resource-index 仅支持单部影片；多部影片请逐部单独运行。",
+            file=sys.stderr,
+        )
+        return 2
+
     pairs: list[tuple[DownloadLink, ResourceItem]] = []
     had_error = False
+    listed_only = False  # 非交互且未指定资源序号：只列了资源表，没取链接
 
     for movie in chosen_movies:
         print(f"\n── 《{movie.title}》 ──", file=sys.stderr)
@@ -352,18 +198,12 @@ def run(args: argparse.Namespace) -> int:
             had_error = True
             continue
 
-        if args.resource_index is not None and not multi_movie:
+        if args.resource_index is not None:
             if not 1 <= args.resource_index <= len(resources):
                 print("指定的资源序号超出范围。", file=sys.stderr)
                 return 2
             chosen_resource = resources[args.resource_index - 1]
-        elif multi_movie or auto_pick:
-            print_resource_table(resources, file=sys.stderr)
-            picked = pick_best(resources, prefs)
-            chosen_resource = picked.item
-            print(f"\n自动挑选：{chosen_resource.title}  [{chosen_resource.size or '?'}]", file=sys.stderr)
-            print(f"  理由：{picked.reason}", file=sys.stderr)
-        else:
+        elif sys.stdin.isatty():
             print_resource_table(resources, file=sys.stderr)
             chosen_resource = choose_from_list(
                 resources,
@@ -375,6 +215,11 @@ def run(args: argparse.Namespace) -> int:
                 if not multi_movie:
                     return 0
                 continue
+        else:
+            # 非交互调用（agent）：程序不替用户挑，列出资源表后交还给调用方。
+            print_resource_table(resources, file=sys.stderr)
+            listed_only = True
+            continue
 
         try:
             link = pool.fetch_download(chosen_resource.tdown_id)
@@ -387,6 +232,14 @@ def run(args: argparse.Namespace) -> int:
             had_error = True
             continue
         pairs.append((link, chosen_resource))
+
+    if listed_only and not pairs:
+        print(
+            "未指定 --resource-index，仅列出资源。挑选序号后重新运行，例如：\n"
+            f"  --movies <影片序号> --resource-index <资源序号> --magnet-only",
+            file=sys.stderr,
+        )
+        return 0
 
     if not pairs:
         return 1 if had_error else 0
