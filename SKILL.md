@@ -107,5 +107,7 @@ State your pick and the reason briefly before fetching the link.
 
 - For personal research and learning only.
 - If the site structure changes and parsing fails, report the HTML fragment.
+- Offline tests live in `tests/` (stdlib unittest, no network). Run from this directory:
+  `uv run --with requests --with beautifulsoup4 --with zhconv python -m unittest discover -s tests -t .`
 - The development home of this tool is the `movie-download` project; bug fixes made
   there should be synced into this skill directory (copy `main.py` and `bt_search/`).
