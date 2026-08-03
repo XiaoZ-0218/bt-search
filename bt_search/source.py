@@ -3,7 +3,7 @@
 一个 ``BTSource`` 代表一个可搜索的 BT 站点。接口**只负责取数据并原样返回**，
 不做任何过滤、挑选或关键词变形——那些是上层的职责：
 
-    main.py / picker / search（上层：fallback 关键词、挑资源、过滤）
+    main.py / search（上层：fallback 关键词、按序号取资源）
         ↓
     SourcePool（多源管理：失败切站）
         ↓
