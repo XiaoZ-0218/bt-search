@@ -1,0 +1,10 @@
+{
+  "resolution": "1080p",
+  "audio": "guo",
+  "subtitles": "chi",
+  "prefer_original_audio": false,
+  "hdr": true,
+  "dolby_vision": true,
+  "auto_pick": true,
+  "max_size_gb": 20
+}
