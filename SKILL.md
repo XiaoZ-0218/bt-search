@@ -76,7 +76,7 @@ explicit request always wins; otherwise apply these defaults:
   episodes (`E01`/`S01E01`/`第X集`). Only pick single episodes when no pack exists
   or the user asks for specific episodes. A full-season pack is naturally much
   bigger than one episode, so don't penalize it on size.
-- **Resolution**: default to `1080p`. Aliases: `4K`/`UHD`/`2160p` are the same tier,
+- **Resolution**: default to `2160p` (4K). Aliases: `4K`/`UHD`/`2160p` are the same tier,
   as are `FHD`/`1080p` and `HD`/`720p`. If the preferred tier is missing, prefer one
   tier **higher** over going lower.
 - **Audio**: `国语`/`普通话`/`国配` = Mandarin, `粤语` = Cantonese. For foreign films
