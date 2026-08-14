@@ -26,6 +26,9 @@ class SourcePool(BTSource):
         if not sources:
             raise ValueError("SourcePool 至少需要一个 BTSource")
         self.sources = list(sources)
+        # search 时记录"detail_id 属于哪个源"，fetch_resources 直连对应源，
+        # 避免把合成 ID（如 torrentkitty 的 "all"）误发给其它源。
+        self._owners: dict[str, BTSource] = {}
 
     @property
     def name(self) -> str:
@@ -44,14 +47,19 @@ class SourcePool(BTSource):
                 continue
             any_ok = True
             if results:
+                for r in results:
+                    self._owners[r.detail_id] = source
                 return results
         if not any_ok and last_error is not None:
             raise last_error
         return []
 
     def fetch_resources(self, detail_id: str) -> List[ResourceItem]:
-        """拉取资源列表；异常时切下一个源重试。"""
+        """拉取资源列表；优先直连产出该结果的源，未知 ID 走异常切源。"""
 
+        owner = self._owners.get(detail_id)
+        if owner is not None:
+            return owner.fetch_resources(detail_id)
         return self._failover(lambda s: s.fetch_resources(detail_id))
 
     def fetch_download(self, tdown_id: str) -> DownloadLink:

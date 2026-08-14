@@ -23,7 +23,15 @@ from typing import List, Optional
 
 import requests
 
-from bt_search import BtbtlaSource, DownloadLink, ResourceItem, SearchResult, SourcePool
+from bt_search import (
+    BtbtlaSource,
+    CilixiongSource,
+    DownloadLink,
+    ResourceItem,
+    SearchResult,
+    SourcePool,
+    TorrentKittySource,
+)
 from bt_search.cli import (
     choose_from_list,
     choose_many_from_list,
@@ -61,7 +69,7 @@ def _print_no_results_help(
         "可以试试：\n"
         "  · 切换关键词（英文名 / 拼音 / IMDb ID）\n"
         "  · 暂时无片源：过几天再跑一次，新片源通常 1-2 周内陆续流出\n"
-        "  · 换站点：btbtt.com / btdig.com / ciliba.com / 蒲公英 / 磁力熊",
+        "  · 强制指定备用源：--source cilixiong.org / --source torrentkitty.net",
         file=file,
     )
 
@@ -69,7 +77,7 @@ def _print_no_results_help(
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="bt-search",
-        description="在 btbtla.com 上搜索影片并获取磁力等下载链接。",
+        description="在多个 BT 站点上搜索影片并获取磁力等下载链接。",
     )
     p.add_argument(
         "keyword",
@@ -82,6 +90,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=10,
         help="搜索结果最多显示多少部影片，默认 10。",
+    )
+    p.add_argument(
+        "--source",
+        default=None,
+        metavar="NAME",
+        help=(
+            "指定搜索站点（默认全部，自动失败切换）："
+            "btbtla.com / cilixiong.org / torrentkitty.net"
+        ),
     )
     p.add_argument(
         "--resource-index",
@@ -108,14 +125,33 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _build_pool() -> SourcePool:
-    """构造站点池。目前只有 btbtla 一个可用源；以后接新源往列表里加即可。"""
+_ALL_SOURCES: "dict[str, type]" = {
+    "btbtla.com": BtbtlaSource,
+    "cilixiong.org": CilixiongSource,
+    "torrentkitty.net": TorrentKittySource,
+}
+_DEFAULT_SOURCES = [BtbtlaSource, CilixiongSource, TorrentKittySource]
 
-    return SourcePool([BtbtlaSource()])
+
+def _build_pool(source: Optional[str] = None) -> SourcePool:
+    """构造站点池：默认全源（btbtla 主源，其余失败切换）；--source 指定单源。"""
+
+    if source is None:
+        return SourcePool([cls() for cls in _DEFAULT_SOURCES])
+    cls = _ALL_SOURCES.get(source)
+    if cls is None:
+        raise ValueError(
+            f"未知站点：{source}（可选：{' / '.join(_ALL_SOURCES)}）"
+        )
+    return SourcePool([cls()])
 
 
 def run(args: argparse.Namespace) -> int:
-    pool = _build_pool()
+    try:
+        pool = _build_pool(args.source)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
 
     keyword: Optional[str] = args.keyword
     if not keyword:
