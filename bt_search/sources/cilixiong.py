@@ -66,7 +66,12 @@ def _iter_movies(html: str, base_url: str, *, limit: int) -> Iterable[SearchResu
 
 
 def _iter_magnets(html: str) -> Iterable[ResourceItem]:
-    """解析详情页的 magnet 锚点为资源条目（标题带 [3.48G] 大小后缀）。"""
+    """解析详情页的 magnet 锚点为资源条目（标题带 [3.48G] 大小后缀）。
+
+    注意：站方会把中文资源标题里的部分汉字替换成随机小写字母
+    （反爬混淆，如 流浪地球2：再次冒险 → l浪d球2：z次m险），无法还原；
+    挑选时以 magnet 哈希与质量标签（HD4K / 1080p / 国语中字 等）为准。
+    """
 
     soup = BeautifulSoup(html, "html.parser")
     seen: set[str] = set()

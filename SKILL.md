@@ -23,8 +23,8 @@ Picking the best resource is your job (the model's); the heuristics are below.
 | Site | Shape | Role |
 | --- | --- | --- |
 | btbtla.com | movie → resource versions | primary, best Chinese metadata |
-| cilixiong.org (磁力熊) | movie → detail page magnets | fallback |
-| torrentkitty.net | flat magnet engine (hits = resources) | fallback |
+| cilixiong.org (磁力熊) | movie → detail page magnets | fallback; Chinese resource titles are obfuscated by the site (random letters replace chars), judge by magnet + quality tags like HD4K/国语中字 |
+| torrentkitty.net | flat magnet engine (hits = resources) | fallback; its size column is unreliable, judge by title |
 
 Search tries the sites in order and moves to the next on failure or empty results.
 If the primary site returns hits but none of them is the right title, re-run with

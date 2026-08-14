@@ -39,12 +39,25 @@ class _KittyHit:
 
 
 def _iter_hits(html: str, base_url: str) -> List[_KittyHit]:
-    """解析搜索结果表格行（标题 / 大小 / 日期 / Detail + magnet 链接）。"""
+    """解析搜索结果表格行（标题 / 大小 / 日期 / Detail + magnet 链接）。
+
+    只取表头为 "Torrent Description" 的结果表，避免侧栏其它表格混入；
+    行内字段按 ``td.name / td.size`` class 定位。
+    """
 
     soup = BeautifulSoup(html, "html.parser")
+    table = None
+    for t in soup.find_all("table"):
+        th = t.find("th")
+        if isinstance(th, Tag) and "Description" in th.get_text(" ", strip=True):
+            table = t
+            break
+    if table is None:
+        return []
+
     hits: List[_KittyHit] = []
     seen: set[str] = set()
-    for row in soup.select("tr"):
+    for row in table.select("tr"):
         detail_a = row.select_one('a[rel="information"]')
         if not isinstance(detail_a, Tag):
             continue
@@ -61,9 +74,18 @@ def _iter_hits(html: str, base_url: str) -> List[_KittyHit]:
             continue
         seen.add(info_hash)
 
-        title = str(detail_a.get("title") or detail_a.get_text(" ", strip=True)).strip()
-        tds = [td.get_text(" ", strip=True) for td in row.find_all("td")]
-        size = _parse_size(" ".join(tds[1:2])) if len(tds) > 1 else ""
+        name_td = row.select_one("td.name")
+        size_td = row.select_one("td.size")
+        title = (
+            str(detail_a.get("title") or detail_a.get_text(" ", strip=True)).strip()
+        )
+        if isinstance(name_td, Tag) and name_td.get_text(" ", strip=True):
+            title = name_td.get_text(" ", strip=True)
+        size = (
+            _parse_size(size_td.get_text(" ", strip=True))
+            if isinstance(size_td, Tag)
+            else ""
+        )
 
         hits.append(
             _KittyHit(
@@ -95,7 +117,7 @@ class TorrentKittySource(BTSource):
                 "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
             }
         )
-        self._hits: List[_KittyHit] = []  # 本次搜索的命中缓存（单次运行内有效）
+        self._hits: List[_KittyHit] = []  # 首次非空搜索的命中缓存（单次运行内有效）
 
     @property
     def name(self) -> str:
@@ -111,12 +133,19 @@ class TorrentKittySource(BTSource):
 
     # ---------- BTSource API ----------
     def search(self, keyword: str, *, limit: int = 20) -> List[SearchResult]:
-        """搜索并缓存命中；返回一条合成结果（整页命中即资源列表）。"""
+        """搜索并缓存命中；返回一条合成结果（整页命中即资源列表）。
+
+        关键词 fallback 会连续调多次 search，只缓存**首个非空**查询的命中——
+        与 search_with_fallback 去重后保留的合成结果（detail_id="all"）保持一致，
+        否则 fetch_resources 会拿到最后一次查询的命中。
+        """
 
         if not keyword or not keyword.strip():
             return []
         html = self._get(f"/search/{quote(keyword.strip())}")
-        self._hits = _iter_hits(html, self.base_url)[:limit]
+        hits = _iter_hits(html, self.base_url)[:limit]
+        if hits and not self._hits:
+            self._hits = hits
         if not self._hits:
             return []
         n = len(self._hits)
