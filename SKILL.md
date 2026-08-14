@@ -1,21 +1,34 @@
 ---
 name: bt-search
 description: >
-  Search movies and TV shows on btbtla.com and return magnet / download links.
+  Search movies and TV shows across multiple BT sources (btbtla.com, cilixiong.org,
+  torrentkitty.net) and return magnet / download links.
   Trigger when the user asks to search a movie, get a magnet, use bt-search,
   download a film or show, or similar.
-version: 0.3.0
+version: 0.4.0
 ---
 
 # bt-search
 
-Search for films or shows on btbtla.com and retrieve their magnet / thunder download links.
+Search for films or shows across several BT sites and retrieve their magnet / thunder download links.
 
 This skill is **self-contained**: the full CLI (`main.py` + the `bt_search` package)
 ships inside this skill directory and can be run from anywhere.
 
 The CLI only searches, lists, and fetches links — it **never picks a resource for you**.
 Picking the best resource is your job (the model's); the heuristics are below.
+
+## Sites
+
+| Site | Shape | Role |
+| --- | --- | --- |
+| btbtla.com | movie → resource versions | primary, best Chinese metadata |
+| cilixiong.org (磁力熊) | movie → detail page magnets | fallback |
+| torrentkitty.net | flat magnet engine (hits = resources) | fallback |
+
+Search tries the sites in order and moves to the next on failure or empty results.
+If the primary site returns hits but none of them is the right title, re-run with
+`--source <site>` to force a specific backup site (e.g. `--source torrentkitty.net`).
 
 ## When to use
 
@@ -30,7 +43,7 @@ The script uses [PEP 723 inline metadata](https://peps.python.org/pep-0723/), so
 no project checkout, venv, or `cd` needed:
 
 ```bash
-uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "<keyword>" [flags]
+uv run "/Users/zhangxiao/.cc-switch/skills/bt-search/main.py" "<keyword>" [flags]
 ```
 
 Requires `uv` (`brew install uv`). If uv is unavailable, install the three dependencies
@@ -66,6 +79,19 @@ Three runs: search → list resources → fetch the link you picked.
 For several movies, repeat steps 2–3 per movie (`--resource-index` only accepts a
 single movie at a time).
 
+### When the primary site misses
+
+btbtla is searched first and the search **stops at its first non-empty result**, so
+a wrong-but-non-empty hit hides the backup sites. If none of the shown titles match,
+re-run forcing a backup source:
+
+```bash
+uv run "/Users/zhangxiao/.cc-switch/skills/bt-search/main.py" "Swallowed" --source torrentkitty.net
+```
+
+For `torrentkitty.net` (flat engine), search returns a single synthetic movie card;
+run `--movies 1` to list all hits with sizes, then pick by the heuristics below.
+
 ## How to pick a resource
 
 Judge from the resource title, size, and download count in the table. The user's
@@ -98,6 +124,7 @@ State your pick and the reason briefly before fetching the link.
 
 | Flag | Meaning |
 | --- | --- |
+| `--source NAME` | Force one site: `btbtla.com` / `cilixiong.org` / `torrentkitty.net`. Default: all sites, auto-failover. |
 | `--movies <indices>` | Skip movie selection. Accepts `1`, `1,3`, `1-3`, `1,3-5,7`, `all`. |
 | `--resource-index N` | Fetch this resource's links. Single movie only. |
 | `--magnet-only` | Print only magnet links, one per line, to stdout. |
