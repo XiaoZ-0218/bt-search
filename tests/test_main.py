@@ -117,6 +117,35 @@ class TestArgErrors(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("没有找到", err)
 
+    def test_invalid_source_exits_2(self):
+        # 未知源在发任何请求前就失败，因此不 patch _build_pool，走真实路径
+        out, err = io.StringIO(), io.StringIO()
+        args = main.build_parser().parse_args(
+            ["avatar", "--source", "bogus", "--movies", "1"]
+        )
+        with (
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            code = main.run(args)
+        self.assertEqual(code, 2)
+        self.assertIn("未知站点", err.getvalue())
+
+
+class TestBuildPool(unittest.TestCase):
+    def test_default_pool_has_all_sources(self):
+        pool = main._build_pool(None)
+        self.assertEqual(pool.name, "pool(btbtla.com,cilixiong.org,torrentkitty.net)")
+
+    def test_single_source(self):
+        pool = main._build_pool("torrentkitty.net")
+        self.assertEqual(len(pool.sources), 1)
+        self.assertEqual(pool.sources[0].name, "torrentkitty.net")
+
+    def test_unknown_source_raises(self):
+        with self.assertRaises(ValueError):
+            main._build_pool("bogus")
+
 
 class TestInteractiveFlow(unittest.TestCase):
     def test_tty_user_picks_resource(self):

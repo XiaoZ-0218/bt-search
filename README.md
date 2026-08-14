@@ -1,6 +1,6 @@
 # bt-search
 
-> 在 [btbtla.com](https://btbtla.com) 上搜索影片 / 电视剧，并取回 magnet / 迅雷下载链接的轻量命令行工具。
+> 在多个 BT 站点上搜索影片 / 电视剧，并取回 magnet / 迅雷下载链接的轻量命令行工具。
 >
 > 配套 Claude skill — 同目录下的 [SKILL.md](SKILL.md) 描述了如何以 agent 身份调用本程序。
 
@@ -14,7 +14,8 @@
 - 🧠 **不替你挑资源** — 程序只列资源表，挑哪个由调用方按启发式决定（避免误挑冷门 / 大小不合理的资源）。
 - 🔁 **关键词 fallback** — 搜不到时自动用英文名、拼音、IMDb ID 重试，直到命中或耗尽。
 - 🌐 **多源可扩展** — `BTSource` 抽象了站点抓取层；要接新站只需新增一个实现、丢进 `SourcePool`。
-- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；34 个用例覆盖 CLI / 解析 / 抓取。
+- 🛟 **备用源自动切换** — btbtla.com 主源，磁力熊（cilixiong.org）、torrentkitty.net 兜底，失败 / 无结果自动切下一站；`--source` 可强制指定。
+- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；45 个用例覆盖 CLI / 解析 / 抓取。
 - 🪶 **零安装** — 通过 [PEP 723](https://peps.python.org/pep-0723/) 内联依赖声明，`uv run` 临时解决依赖。
 
 ---
@@ -32,6 +33,9 @@ uv run main.py "阿凡达" --movies 1
 
 # 取出指定资源的 magnet（stdout 一行一个）
 uv run main.py "阿凡达" --movies 1 --resource-index 22 --magnet-only
+
+# btbtla 搜不到时，强制指定备用源（磁力熊 / torrentkitty）
+uv run main.py "Swallowed" --source torrentkitty.net --magnet-only
 ```
 
 没有 `uv` 的等价写法：
@@ -47,10 +51,21 @@ python3 main.py "阿凡达"
 | --- | --- |
 | `keyword` | 影片名（中文 / 英文 / 拼音 / IMDb ID），可省略走交互输入 |
 | `-n N` | 搜索结果数量上限，默认 10 |
+| `--source NAME` | 强制指定站点：`btbtla.com` / `cilixiong.org` / `torrentkitty.net`；默认全源自动切换 |
 | `--movies <indices>` | 跳过影片选择；支持 `1`、`1,3`、`1-3`、`1,3-5,7`、`all` |
 | `--resource-index N` | 直接取该资源的 magnet；只对单部影片生效 |
 | `--magnet-only` | 只把 magnet 打到 stdout，其余全部进 stderr |
 | `--movie-index N` | **已废弃**，请改用 `--movies` |
+
+### 站点
+
+| 站点 | 形态 | 说明 |
+| --- | --- | --- |
+| [btbtla.com](https://btbtla.com) | 影片 → 资源版本 | 主源，中文信息最全 |
+| [cilixiong.org](https://www.cilixiong.org)（磁力熊） | 影片 → 详情页 magnet | 备用；搜索走 POST 表单 |
+| [torrentkitty.net](https://www.torrentkitty.net) | 扁平磁力引擎 | 备用；一次搜索直接命中一批种子（标题 + 大小） |
+
+默认按上表顺序搜索，某个站 0 结果或抛异常就自动切下一个；`--source` 可跳过主源直查备用站。
 
 ### 输出分流约定
 
@@ -73,6 +88,8 @@ bt_search/
 ├── cli.py                    交互选择 + 表格输出
 └── sources/
     ├── btbtla.py             btbtla.com 站点实现
+    ├── cilixiong.py          cilixiong.org（磁力熊）站点实现
+    ├── torrentkitty.py       torrentkitty.net 站点实现
     └── pool.py               多源容错（失败自动换源）
 tests/
 ├── test_cli.py
@@ -84,7 +101,9 @@ tests/
 加新站点只需要：
 
 1. 继承 `BTSource` 实现 `search` / `fetch_resources` / `fetch_download` 三个方法；
-2. 在 `main.py` 的 `_build_pool()` 里把它丢进 `SourcePool` 即可。
+2. 在 `main.py` 的 `_build_pool()` / `_ALL_SOURCES` 里注册进 `SourcePool` 即可。
+
+扁平磁力引擎（一次搜索直接出种子）可参考 `torrentkitty.py`：`search` 返回一条合成结果，`fetch_resources` 返回全部命中；`SourcePool` 会记住结果归属的源，`fetch_resources` 时直连。
 
 ---
 

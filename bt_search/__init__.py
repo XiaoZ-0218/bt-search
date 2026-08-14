@@ -1,15 +1,17 @@
-"""bt_search: 在 btbtla.com 上搜索影片并获取下载链接。
+"""bt_search: 在多个 BT 站点上搜索影片并获取下载链接。
 
 分层：
     BTSource          —— 站点抽象接口（bt_search.source）
     BtbtlaSource      —— btbtla.com 实现（bt_search.sources.btbtla）
+    CilixiongSource   —— cilixiong.org 磁力熊实现（bt_search.sources.cilixiong）
+    TorrentKittySource—— torrentkitty.net 实现（bt_search.sources.torrentkitty）
     SourcePool        —— 多源容错管理（bt_search.sources.pool）
     search_with_fallback —— 关键词 fallback（bt_search.search）
 """
 
 from .scraper import SearchResult, ResourceItem, DownloadLink
 from .source import BTSource
-from .sources import BtbtlaSource, SourcePool
+from .sources import BtbtlaSource, CilixiongSource, SourcePool, TorrentKittySource
 from .search import search_with_fallback
 from . import lang
 
@@ -19,6 +21,8 @@ BTSearchClient = BtbtlaSource
 __all__ = [
     "BTSource",
     "BtbtlaSource",
+    "CilixiongSource",
+    "TorrentKittySource",
     "SourcePool",
     "BTSearchClient",
     "SearchResult",
