@@ -12,6 +12,8 @@ import io
 import unittest
 from unittest.mock import patch
 
+import requests
+
 import main
 from bt_search import BTSource, SourcePool
 from bt_search.scraper import DownloadLink, ResourceItem, SearchResult
@@ -90,6 +92,25 @@ class TestNonInteractiveFlow(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("《甲片》", err)
         self.assertIn("《乙片》", err)
+
+    def test_non_tty_without_movies_lists_and_exits(self):
+        code, out, err = run_cli(["avatar"], FakeSource())
+        self.assertEqual(code, 0)
+        self.assertIn("甲片", err)
+        self.assertIn("--movies", err)
+        self.assertEqual(out, "")
+        self.assertNotIn("资源版本", err)
+
+    def test_list_resources_error_exits_nonzero(self):
+        class PartialFail(FakeSource):
+            def fetch_resources(self, detail_id):
+                if detail_id in {"2", "FakeSource|2"}:
+                    raise requests.RequestException("boom")
+                return super().fetch_resources(detail_id)
+
+        code, _, err = run_cli(["avatar", "--movies", "1,2"], PartialFail())
+        self.assertEqual(code, 1)
+        self.assertIn("获取资源列表失败", err)
 
 
 class TestArgErrors(unittest.TestCase):

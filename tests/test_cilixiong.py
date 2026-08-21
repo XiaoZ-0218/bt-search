@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import unittest
 
-from bt_search.sources.cilixiong import _iter_magnets, _iter_movies
+from bt_search.sources.cilixiong import CilixiongSource, _iter_magnets, _iter_movies
 
 BASE = "https://www.cilixiong.org"
 
@@ -85,6 +85,12 @@ class TestIterMagnets(unittest.TestCase):
 
     def test_empty_page(self):
         self.assertEqual(list(_iter_magnets("<html></html>")), [])
+
+
+class TestFetchDownload(unittest.TestCase):
+    def test_rejects_non_magnet_id(self):
+        with self.assertRaises(ValueError):
+            CilixiongSource().fetch_download("55")
 
 
 if __name__ == "__main__":

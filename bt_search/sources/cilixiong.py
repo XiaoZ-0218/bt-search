@@ -123,7 +123,7 @@ class CilixiongSource(BTSource):
         url = urljoin(self.base_url + "/", path.lstrip("/"))
         resp = self.session.get(url, timeout=self.timeout)
         resp.raise_for_status()
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        resp.encoding = "utf-8"
         return resp.text
 
     # ---------- BTSource API ----------
@@ -139,7 +139,7 @@ class CilixiongSource(BTSource):
             timeout=self.timeout,
         )
         resp.raise_for_status()
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        resp.encoding = "utf-8"
         return list(_iter_movies(resp.text, self.base_url, limit=limit))
 
     def fetch_resources(self, detail_id: str) -> List[ResourceItem]:
@@ -151,4 +151,6 @@ class CilixiongSource(BTSource):
     def fetch_download(self, tdown_id: str) -> DownloadLink:
         """详情页 magnet 即最终链接，直接返回。"""
 
+        if not tdown_id.startswith("magnet:"):
+            raise ValueError(f"{self.name} 的 tdown_id 必须是 magnet 链接")
         return DownloadLink(tdown_id=tdown_id, magnet=tdown_id)

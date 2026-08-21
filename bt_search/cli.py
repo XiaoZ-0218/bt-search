@@ -34,7 +34,7 @@ def print_search_results(
     print(_c("1;36", "── 搜索结果 ──", file=file), file=file)
     for idx, r in enumerate(results, 1):
         head = f"[{idx}] {_c('1;33', r.title, file=file)}"
-        meta = " · ".join(p for p in [r.year, r.region, r.category] if p)
+        meta = " · ".join(p for p in [r.year, r.region, r.category, r.source] if p)
         print(f"{head}  {meta}", file=file)
         if r.summary:
             print(f"    {_c('90', _truncate(r.summary, 110), file=file)}", file=file)

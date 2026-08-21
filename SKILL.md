@@ -5,7 +5,7 @@ description: >
   torrentkitty.net) and return magnet / download links.
   Trigger when the user asks to search a movie, get a magnet, use bt-search,
   download a film or show, or similar.
-version: 0.4.0
+version: 0.4.1
 ---
 
 # bt-search
@@ -30,6 +30,10 @@ Search tries the sites in order and moves to the next on failure or empty result
 If the primary site returns hits but none of them is the right title, re-run with
 `--source <site>` to force a specific backup site (e.g. `--source torrentkitty.net`).
 
+On a miss the CLI automatically retries with keyword fallbacks: split tokens
+("夜王 黄子华" → "夜王" / "黄子华") and simplified/traditional variants. A flat
+engine hit (torrentkitty) stops the fallback after the first complete result.
+
 ## When to use
 
 - The user asks to search for a movie or TV show.
@@ -43,7 +47,7 @@ The script uses [PEP 723 inline metadata](https://peps.python.org/pep-0723/), so
 no project checkout, venv, or `cd` needed:
 
 ```bash
-uv run "/Users/zhangxiao/.cc-switch/skills/bt-search/main.py" "<keyword>" [flags]
+uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "<keyword>" [flags]
 ```
 
 Requires `uv` (`brew install uv`). If uv is unavailable, install the three dependencies
@@ -86,7 +90,7 @@ a wrong-but-non-empty hit hides the backup sites. If none of the shown titles ma
 re-run forcing a backup source:
 
 ```bash
-uv run "/Users/zhangxiao/.cc-switch/skills/bt-search/main.py" "Swallowed" --source torrentkitty.net
+uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "Swallowed" --source torrentkitty.net
 ```
 
 For `torrentkitty.net` (flat engine), search returns a single synthetic movie card;

@@ -12,10 +12,10 @@
 
 - 🎬 **搜索 + 列资源 + 取链接** 三段式 CLI，结构清爽。
 - 🧠 **不替你挑资源** — 程序只列资源表，挑哪个由调用方按启发式决定（避免误挑冷门 / 大小不合理的资源）。
-- 🔁 **关键词 fallback** — 搜不到时自动用英文名、拼音、IMDb ID 重试，直到命中或耗尽。
+- 🔁 **关键词 fallback** — 搜不到时自动拆词、简繁互转重试，直到命中或耗尽。
 - 🌐 **多源可扩展** — `BTSource` 抽象了站点抓取层；要接新站只需新增一个实现、丢进 `SourcePool`。
 - 🛟 **备用源自动切换** — btbtla.com 主源，磁力熊（cilixiong.org）、torrentkitty.net 兜底，失败 / 无结果自动切下一站；`--source` 可强制指定。
-- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；45 个用例覆盖 CLI / 解析 / 抓取。
+- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；58 个用例覆盖 CLI / 解析 / 抓取 / 多源路由。
 - 🪶 **零安装** — 通过 [PEP 723](https://peps.python.org/pep-0723/) 内联依赖声明，`uv run` 临时解决依赖。
 
 ---
@@ -84,17 +84,21 @@ bt_search/
 ├── scraper.py                数据类（SearchResult / ResourceItem / DownloadLink）
 ├── source.py                 BTSource 抽象接口
 ├── lang.py                   简繁转换 + 启发式小工具
-├── search.py                 关键词 fallback（中文 → 英文 / 拼音 / IMDb ID）
+├── search.py                 关键词 fallback（原词 → 拆词 → 简繁）
 ├── cli.py                    交互选择 + 表格输出
 └── sources/
     ├── btbtla.py             btbtla.com 站点实现
     ├── cilixiong.py          cilixiong.org（磁力熊）站点实现
     ├── torrentkitty.py       torrentkitty.net 站点实现
-    └── pool.py               多源容错（失败自动换源）
+    └── pool.py               多源：搜索可换源；取链按 源名|id 直连
 tests/
 ├── test_cli.py
 ├── test_lang.py
 ├── test_main.py
+├── test_pool.py
+├── test_search.py
+├── test_cilixiong.py
+├── test_torrentkitty.py
 └── test_scraper.py           stdlib unittest，全部离线
 ```
 
@@ -103,7 +107,7 @@ tests/
 1. 继承 `BTSource` 实现 `search` / `fetch_resources` / `fetch_download` 三个方法；
 2. 在 `main.py` 的 `_build_pool()` / `_ALL_SOURCES` 里注册进 `SourcePool` 即可。
 
-扁平磁力引擎（一次搜索直接出种子）可参考 `torrentkitty.py`：`search` 返回一条合成结果，`fetch_resources` 返回全部命中；`SourcePool` 会记住结果归属的源，`fetch_resources` 时直连。
+扁平磁力引擎（一次搜索直接出种子）可参考 `torrentkitty.py`：`search` 返回一条合成结果（`complete=True`），`fetch_resources` 返回全部命中。`SourcePool` 给 ID 加上 `源名|` 前缀，取链只打所属源，避免把数字 ID 误当成 magnet。
 
 ---
 

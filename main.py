@@ -195,7 +195,7 @@ def run(args: argparse.Namespace) -> int:
             print("指定的影片序号超出范围。", file=sys.stderr)
             return 2
         chosen_movies = [results[args.movie_index - 1]]
-    else:
+    elif sys.stdin.isatty():
         chosen_movies = choose_many_from_list(
             results,
             prompt="选择影片 (输入序号, 支持 1,3-5 / all / q): ",
@@ -204,6 +204,13 @@ def run(args: argparse.Namespace) -> int:
         )
         if not chosen_movies:
             return 0
+    else:
+        print(
+            "未指定 --movies，仅列出影片。挑选序号后重新运行，例如：\n"
+            "  --movies <影片序号>",
+            file=sys.stderr,
+        )
+        return 0
 
     multi_movie = len(chosen_movies) > 1
     if args.resource_index is not None and multi_movie:
@@ -275,7 +282,7 @@ def run(args: argparse.Namespace) -> int:
             f"  --movies <影片序号> --resource-index <资源序号> --magnet-only",
             file=sys.stderr,
         )
-        return 0
+        return 1 if had_error else 0
 
     if not pairs:
         return 1 if had_error else 0

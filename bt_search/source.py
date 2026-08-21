@@ -5,7 +5,7 @@
 
     main.py / search（上层：fallback 关键词、按序号取资源）
         ↓
-    SourcePool（多源管理：失败切站）
+    SourcePool（多源管理：搜索失败切站；取链按源名|id 直连，不换源）
         ↓
     BTSource（本接口：search / fetch_resources / fetch_download，原样返回）
         ↓

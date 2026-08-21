@@ -54,5 +54,8 @@ def search_with_fallback(
         # 凑够就停，不浪费后续 fallback
         if merged and len(merged) >= limit:
             break
+        # 扁平源（如 torrentkitty）一次搜索即完整结果
+        if any(r.complete for r in merged):
+            break
 
     return merged[:limit], attempts
