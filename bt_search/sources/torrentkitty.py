@@ -128,7 +128,7 @@ class TorrentKittySource(BTSource):
         url = urljoin(self.base_url + "/", path.lstrip("/"))
         resp = self.session.get(url, timeout=self.timeout)
         resp.raise_for_status()
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        resp.encoding = "utf-8"
         return resp.text
 
     # ---------- BTSource API ----------
@@ -146,7 +146,7 @@ class TorrentKittySource(BTSource):
         hits = _iter_hits(html, self.base_url)[:limit]
         if hits and not self._hits:
             self._hits = hits
-        if not self._hits:
+        if not hits:
             return []
         n = len(self._hits)
         return [
@@ -155,6 +155,7 @@ class TorrentKittySource(BTSource):
                 title=f"「{keyword.strip()}」共 {n} 条磁力资源",
                 url=self.base_url,
                 summary=f"torrentkitty 搜索到的 {n} 条种子，详见资源列表",
+                complete=True,
             )
         ]
 
@@ -176,4 +177,6 @@ class TorrentKittySource(BTSource):
     def fetch_download(self, tdown_id: str) -> DownloadLink:
         """magnet 即最终链接，直接返回。"""
 
+        if not tdown_id.startswith("magnet:"):
+            raise ValueError(f"{self.name} 的 tdown_id 必须是 magnet 链接")
         return DownloadLink(tdown_id=tdown_id, magnet=tdown_id)

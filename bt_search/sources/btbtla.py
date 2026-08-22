@@ -57,7 +57,7 @@ class BtbtlaSource(BTSource):
         resp = self.session.get(url, headers=headers, timeout=self.timeout)
         resp.raise_for_status()
         # 站点输出 utf-8，强制按 utf-8 解码，避免 chardet 误判
-        resp.encoding = resp.apparent_encoding or "utf-8"
+        resp.encoding = "utf-8"
         return resp.text
 
     # ---------- BTSource API ----------
@@ -82,15 +82,3 @@ class BtbtlaSource(BTSource):
         html = self._get(f"/tdown/{tdown_id}.html")
         magnet, thunder, extras = _extract_download_links(html)
         return DownloadLink(tdown_id=tdown_id, magnet=magnet, thunder=thunder, extras=extras)
-
-    # ---------- 便捷方法 ----------
-    def get_first_magnet(self, keyword: str) -> Optional[DownloadLink]:
-        """便捷方法：返回搜索结果第一名 / 第一个资源的 magnet（如有）。"""
-
-        results = self.search(keyword, limit=1)
-        if not results:
-            return None
-        resources = self.fetch_resources(results[0].detail_id)
-        if not resources:
-            return None
-        return self.fetch_download(resources[0].tdown_id)

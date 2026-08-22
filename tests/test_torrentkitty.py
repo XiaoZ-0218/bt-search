@@ -135,6 +135,26 @@ class TestSourceFallback(unittest.TestCase):
         self.assertIn("Swallowed.2022.1080p.WEBRip", resources[1].title)
         self.assertNotIn("第二次查询的命中", [r.title for r in resources])
 
+    def test_empty_followup_query_returns_empty_keeps_cache(self):
+        session = _FakeSession(
+            {
+                "/search/Swallowed%202022": SEARCH_HTML,
+                "/search/Nope": "<html></html>",
+            }
+        )
+        from bt_search.sources.torrentkitty import TorrentKittySource
+
+        src = TorrentKittySource(session=session)
+        self.assertEqual(len(src.search("Swallowed 2022")), 1)
+        self.assertEqual(src.search("Nope"), [])
+        self.assertEqual(len(src.fetch_resources("all")), 2)
+
+    def test_fetch_download_rejects_non_magnet_id(self):
+        from bt_search.sources.torrentkitty import TorrentKittySource
+
+        with self.assertRaises(ValueError):
+            TorrentKittySource().fetch_download("55")
+
 
 if __name__ == "__main__":
     unittest.main()

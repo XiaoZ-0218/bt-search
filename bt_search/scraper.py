@@ -37,6 +37,8 @@ class SearchResult:
     year: str = ""
     region: str = ""
     summary: str = ""
+    source: str = ""
+    complete: bool = False
 
 
 @dataclass
@@ -48,6 +50,7 @@ class ResourceItem:
     size: str = ""  # 文件大小，例如 47.95GB
     downloads: str = ""  # 下载量
     url: str = ""
+    source: str = ""
 
 
 @dataclass
