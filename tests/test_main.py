@@ -156,12 +156,19 @@ class TestArgErrors(unittest.TestCase):
 class TestBuildPool(unittest.TestCase):
     def test_default_pool_has_all_sources(self):
         pool = main._build_pool(None)
-        self.assertEqual(pool.name, "pool(btbtla.com,cilixiong.org,torrentkitty.net)")
+        self.assertEqual(
+            pool.name,
+            "pool(btbtla.com,cilixiong.org,torrentkitty.net,knaben.org,share.dmhy.org,nyaa.si)",
+        )
 
     def test_single_source(self):
         pool = main._build_pool("torrentkitty.net")
         self.assertEqual(len(pool.sources), 1)
         self.assertEqual(pool.sources[0].name, "torrentkitty.net")
+
+    def test_source_alias(self):
+        pool = main._build_pool("dmhy")
+        self.assertEqual(pool.sources[0].name, "share.dmhy.org")
 
     def test_unknown_source_raises(self):
         with self.assertRaises(ValueError):

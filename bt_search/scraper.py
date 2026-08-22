@@ -185,8 +185,12 @@ def _iter_resources(html: str, base_url: str) -> Iterable[ResourceItem]:
 
 
 def _parse_size(text: str) -> str:
-    m = re.search(r"([\d.]+)\s*(GB|MB|KB|TB)", text, re.IGNORECASE)
-    return f"{m.group(1)}{m.group(2).upper()}" if m else ""
+    m = re.search(r"([\d.]+)\s*(GiB|MiB|KiB|TiB|GB|MB|KB|TB)", text, re.IGNORECASE)
+    if not m:
+        return ""
+    unit = m.group(2).upper()
+    unit = {"GIB": "GB", "MIB": "MB", "KIB": "KB", "TIB": "TB"}.get(unit, unit)
+    return f"{m.group(1)}{unit}"
 
 
 def _extract_download_links(html: str) -> tuple[str, str, List[str]]:

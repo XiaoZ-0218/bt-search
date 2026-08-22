@@ -5,13 +5,24 @@
     BtbtlaSource      —— btbtla.com 实现（bt_search.sources.btbtla）
     CilixiongSource   —— cilixiong.org 磁力熊实现（bt_search.sources.cilixiong）
     TorrentKittySource—— torrentkitty.net 实现（bt_search.sources.torrentkitty）
+    KnabenSource      —— knaben.org 实现（bt_search.sources.knaben）
+    DmhySource        —— share.dmhy.org 动漫花园（bt_search.sources.dmhy）
+    NyaaSource        —— nyaa.si 实现（bt_search.sources.nyaa）
     SourcePool        —— 多源容错管理（bt_search.sources.pool）
     search_with_fallback —— 关键词 fallback（bt_search.search）
 """
 
 from .scraper import SearchResult, ResourceItem, DownloadLink
 from .source import BTSource
-from .sources import BtbtlaSource, CilixiongSource, SourcePool, TorrentKittySource
+from .sources import (
+    BtbtlaSource,
+    CilixiongSource,
+    DmhySource,
+    KnabenSource,
+    NyaaSource,
+    SourcePool,
+    TorrentKittySource,
+)
 from .search import search_with_fallback
 from . import lang
 
@@ -23,6 +34,9 @@ __all__ = [
     "BtbtlaSource",
     "CilixiongSource",
     "TorrentKittySource",
+    "KnabenSource",
+    "DmhySource",
+    "NyaaSource",
     "SourcePool",
     "BTSearchClient",
     "SearchResult",

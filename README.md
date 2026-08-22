@@ -14,8 +14,8 @@
 - 🧠 **不替你挑资源** — 程序只列资源表，挑哪个由调用方按启发式决定（避免误挑冷门 / 大小不合理的资源）。
 - 🔁 **关键词 fallback** — 搜不到时自动拆词、简繁互转重试，直到命中或耗尽。
 - 🌐 **多源可扩展** — `BTSource` 抽象了站点抓取层；要接新站只需新增一个实现、丢进 `SourcePool`。
-- 🛟 **备用源自动切换** — btbtla.com 主源，磁力熊（cilixiong.org）、torrentkitty.net 兜底，失败 / 无结果自动切下一站；`--source` 可强制指定。
-- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；58 个用例覆盖 CLI / 解析 / 抓取 / 多源路由。
+- 🛟 **备用源自动切换** — btbtla.com 主源，磁力熊 / torrentkitty / knaben / 动漫花园 / nyaa 兜底；`--source` 可强制指定。
+- 🧪 **离线测试套件** — stdlib `unittest`，无网络依赖；65 个用例覆盖 CLI / 解析 / 抓取 / 多源路由。
 - 🪶 **零安装** — 通过 [PEP 723](https://peps.python.org/pep-0723/) 内联依赖声明，`uv run` 临时解决依赖。
 
 ---
@@ -34,8 +34,8 @@ uv run main.py "阿凡达" --movies 1
 # 取出指定资源的 magnet（stdout 一行一个）
 uv run main.py "阿凡达" --movies 1 --resource-index 22 --magnet-only
 
-# btbtla 搜不到时，强制指定备用源（磁力熊 / torrentkitty）
-uv run main.py "Swallowed" --source torrentkitty.net --magnet-only
+# 主源搜不到时，强制指定备用源（knaben / 动漫花园 / nyaa）
+uv run main.py "Swallowed" --source knaben.org --magnet-only
 ```
 
 没有 `uv` 的等价写法：
@@ -51,7 +51,7 @@ python3 main.py "阿凡达"
 | --- | --- |
 | `keyword` | 影片名（中文 / 英文 / 拼音 / IMDb ID），可省略走交互输入 |
 | `-n N` | 搜索结果数量上限，默认 10 |
-| `--source NAME` | 强制指定站点：`btbtla.com` / `cilixiong.org` / `torrentkitty.net`；默认全源自动切换 |
+| `--source NAME` | 强制指定站点：`btbtla.com` / `cilixiong.org` / `torrentkitty.net` / `knaben.org` / `share.dmhy.org` / `nyaa.si`（可用 `knaben` / `dmhy` / `nyaa`）；默认全源自动切换 |
 | `--movies <indices>` | 跳过影片选择；支持 `1`、`1,3`、`1-3`、`1,3-5,7`、`all` |
 | `--resource-index N` | 直接取该资源的 magnet；只对单部影片生效 |
 | `--magnet-only` | 只把 magnet 打到 stdout，其余全部进 stderr |
@@ -64,6 +64,9 @@ python3 main.py "阿凡达"
 | [btbtla.com](https://btbtla.com) | 影片 → 资源版本 | 主源，中文信息最全 |
 | [cilixiong.org](https://www.cilixiong.org)（磁力熊） | 影片 → 详情页 magnet | 备用；搜索走 POST 表单 |
 | [torrentkitty.net](https://www.torrentkitty.net) | 扁平磁力引擎 | 备用；一次搜索直接命中一批种子（标题 + 大小） |
+| [knaben.org](https://knaben.org) | 扁平磁力引擎 | torrentkitty 之后的通用磁力兜底，中字标签较多 |
+| [share.dmhy.org](https://share.dmhy.org)（动漫花园） | 扁平磁力引擎 | 中文动漫 / 字幕组资源 |
+| [nyaa.si](https://nyaa.si) | 扁平磁力引擎 | 动漫 / 部分华语 BD；最后一档 |
 
 默认按上表顺序搜索，某个站 0 结果或抛异常就自动切下一个；`--source` 可跳过主源直查备用站。
 
@@ -90,6 +93,10 @@ bt_search/
     ├── btbtla.py             btbtla.com 站点实现
     ├── cilixiong.py          cilixiong.org（磁力熊）站点实现
     ├── torrentkitty.py       torrentkitty.net 站点实现
+    ├── knaben.py             knaben.org 站点实现
+    ├── dmhy.py               share.dmhy.org 动漫花园
+    ├── nyaa.py               nyaa.si 站点实现
+    ├── flat.py               扁平磁力源共用缓存
     └── pool.py               多源：搜索可换源；取链按 源名|id 直连
 tests/
 ├── test_cli.py
@@ -99,6 +106,9 @@ tests/
 ├── test_search.py
 ├── test_cilixiong.py
 ├── test_torrentkitty.py
+├── test_knaben.py
+├── test_dmhy.py
+├── test_nyaa.py
 └── test_scraper.py           stdlib unittest，全部离线
 ```
 

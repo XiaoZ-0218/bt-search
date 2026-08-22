@@ -2,7 +2,19 @@
 
 from .btbtla import BtbtlaSource
 from .cilixiong import CilixiongSource
+from .dmhy import DmhySource
+from .knaben import KnabenSource
+from .nyaa import NyaaSource
 from .pool import SourcePool
 from .torrentkitty import TorrentKittySource
 
-__all__ = ["BtbtlaSource", "CilixiongSource", "SourcePool", "TorrentKittySource"]
+__all__ = [
+    "BtbtlaSource",
+    "CilixiongSource",
+    "TorrentKittySource",
+    "KnabenSource",
+    "DmhySource",
+    "NyaaSource",
+    "SourcePool",
+]
+
