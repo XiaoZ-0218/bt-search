@@ -26,7 +26,10 @@ import requests
 from bt_search import (
     BtbtlaSource,
     CilixiongSource,
+    DmhySource,
     DownloadLink,
+    KnabenSource,
+    NyaaSource,
     ResourceItem,
     SearchResult,
     SourcePool,
@@ -69,7 +72,7 @@ def _print_no_results_help(
         "可以试试：\n"
         "  · 切换关键词（英文名 / 拼音 / IMDb ID）\n"
         "  · 暂时无片源：过几天再跑一次，新片源通常 1-2 周内陆续流出\n"
-        "  · 强制指定备用源：--source cilixiong.org / --source torrentkitty.net",
+        "  · 强制指定备用源：--source knaben.org / --source nyaa.si / --source dmhy",
         file=file,
     )
 
@@ -97,7 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="NAME",
         help=(
             "指定搜索站点（默认全部，自动失败切换）："
-            "btbtla.com / cilixiong.org / torrentkitty.net"
+            "btbtla.com / cilixiong.org / torrentkitty.net / "
+            "knaben.org / share.dmhy.org / nyaa.si"
         ),
     )
     p.add_argument(
@@ -129,8 +133,22 @@ _ALL_SOURCES: "dict[str, type]" = {
     "btbtla.com": BtbtlaSource,
     "cilixiong.org": CilixiongSource,
     "torrentkitty.net": TorrentKittySource,
+    "knaben.org": KnabenSource,
+    "knaben": KnabenSource,
+    "share.dmhy.org": DmhySource,
+    "dmhy.org": DmhySource,
+    "dmhy": DmhySource,
+    "nyaa.si": NyaaSource,
+    "nyaa": NyaaSource,
 }
-_DEFAULT_SOURCES = [BtbtlaSource, CilixiongSource, TorrentKittySource]
+_DEFAULT_SOURCES = [
+    BtbtlaSource,
+    CilixiongSource,
+    TorrentKittySource,
+    KnabenSource,
+    DmhySource,
+    NyaaSource,
+]
 
 
 def _build_pool(source: Optional[str] = None) -> SourcePool:

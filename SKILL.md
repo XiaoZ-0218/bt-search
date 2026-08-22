@@ -2,10 +2,10 @@
 name: bt-search
 description: >
   Search movies and TV shows across multiple BT sources (btbtla.com, cilixiong.org,
-  torrentkitty.net) and return magnet / download links.
+  torrentkitty.net, knaben.org, share.dmhy.org, nyaa.si) and return magnet / download links.
   Trigger when the user asks to search a movie, get a magnet, use bt-search,
   download a film or show, or similar.
-version: 0.4.1
+version: 0.5.0
 ---
 
 # bt-search
@@ -25,10 +25,13 @@ Picking the best resource is your job (the model's); the heuristics are below.
 | btbtla.com | movie → resource versions | primary, best Chinese metadata |
 | cilixiong.org (磁力熊) | movie → detail page magnets | fallback; Chinese resource titles are obfuscated by the site (random letters replace chars), judge by magnet + quality tags like HD4K/国语中字 |
 | torrentkitty.net | flat magnet engine (hits = resources) | fallback; its size column is unreliable, judge by title |
+| knaben.org | flat magnet engine | fallback after torrentkitty; Chinese 中字 tags often present |
+| share.dmhy.org (动漫花园) | flat magnet engine | Chinese anime / fansub fallback |
+| nyaa.si | flat magnet engine | anime / some Chinese BD rips; last resort |
 
 Search tries the sites in order and moves to the next on failure or empty results.
 If the primary site returns hits but none of them is the right title, re-run with
-`--source <site>` to force a specific backup site (e.g. `--source torrentkitty.net`).
+`--source <site>` to force a specific backup site (e.g. `--source knaben.org`).
 
 On a miss the CLI automatically retries with keyword fallbacks: split tokens
 ("夜王 黄子华" → "夜王" / "黄子华") and simplified/traditional variants. A flat
@@ -90,10 +93,10 @@ a wrong-but-non-empty hit hides the backup sites. If none of the shown titles ma
 re-run forcing a backup source:
 
 ```bash
-uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "Swallowed" --source torrentkitty.net
+uv run "/Users/zhangxiao/.agents/skills/bt-search/main.py" "Swallowed" --source knaben.org
 ```
 
-For `torrentkitty.net` (flat engine), search returns a single synthetic movie card;
+For flat engines (`torrentkitty.net` / `knaben.org` / `share.dmhy.org` / `nyaa.si`), search returns a single synthetic movie card;
 run `--movies 1` to list all hits with sizes, then pick by the heuristics below.
 
 ## How to pick a resource
@@ -128,7 +131,7 @@ State your pick and the reason briefly before fetching the link.
 
 | Flag | Meaning |
 | --- | --- |
-| `--source NAME` | Force one site: `btbtla.com` / `cilixiong.org` / `torrentkitty.net`. Default: all sites, auto-failover. |
+| `--source NAME` | Force one site: `btbtla.com` / `cilixiong.org` / `torrentkitty.net` / `knaben.org` / `share.dmhy.org` / `nyaa.si` (aliases: `knaben` / `dmhy` / `nyaa`). Default: all sites, auto-failover. |
 | `--movies <indices>` | Skip movie selection. Accepts `1`, `1,3`, `1-3`, `1,3-5,7`, `all`. |
 | `--resource-index N` | Fetch this resource's links. Single movie only. |
 | `--magnet-only` | Print only magnet links, one per line, to stdout. |

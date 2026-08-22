@@ -93,6 +93,8 @@ class TestParseSize(unittest.TestCase):
     def test_units(self):
         self.assertEqual(_parse_size("xx 47.95GB yy"), "47.95GB")
         self.assertEqual(_parse_size("800MB"), "800MB")
+        self.assertEqual(_parse_size("17.5 GiB"), "17.5GB")
+        self.assertEqual(_parse_size("800 MiB"), "800MB")
         self.assertEqual(_parse_size("没有体积"), "")
 
 
