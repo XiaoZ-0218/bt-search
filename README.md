@@ -2,9 +2,9 @@
 
 > 在多个 BT 站点上搜索影片 / 电视剧，并取回 magnet / 迅雷下载链接的轻量命令行工具。
 >
-> 配套 Claude skill — 同目录下的 [SKILL.md](SKILL.md) 描述了如何以 agent 身份调用本程序。
+> 配套 agent skill — 同目录下的 [SKILL.md](SKILL.md) 描述了如何以 agent 身份调用本程序。
 
-本仓库是 [movie-download](https://example.invalid) 项目的“skill 形态”分支：把 CLI 与站点实现打成自包含的目录，可以直接被 `uv run` 拉起，无需 clone 仓库或建 venv。
+本仓库把 CLI 与站点实现打成自包含的目录，可以直接被 `uv run` 拉起，无需 clone 仓库或建 venv。
 
 ---
 
